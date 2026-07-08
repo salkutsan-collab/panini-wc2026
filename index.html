@@ -65,6 +65,20 @@
   .share-btn{width:100%;padding:14px;border:none;border-radius:12px;background:var(--dup);
     color:#fff;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(43,123,224,.35)}
   .share-btn:active{transform:translateY(1px)}
+  .stats-head{background:var(--card);border:1px solid #e5e7eb;border-radius:12px;
+    padding:12px 14px;margin:8px 0;font-size:15px}
+  .stats-head .big{font-size:22px;font-weight:800;color:var(--accent)}
+  .stats{background:var(--card);border:1px solid #e5e7eb;border-radius:14px;padding:8px 12px;margin:8px 0}
+  .stat-row{display:grid;grid-template-columns:104px 1fr 46px;gap:8px;align-items:center;
+    padding:5px 0;font-size:13px}
+  .stat-row + .stat-row{border-top:1px solid #f0f1f4}
+  .stat-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stat-track{background:var(--need);border-radius:6px;height:14px;overflow:hidden}
+  .stat-track > i{display:block;height:100%;width:0;background:var(--have);border-radius:6px;transition:width .3s}
+  .stat-num{text-align:right;color:var(--muted);font-weight:700}
+  .stat-row.full .stat-num{color:#b8860b}
+  .stat-row.full .stat-track > i{background:#ffd23f}
+  .stat-row.full .stat-name::after{content:" ✓";color:#b8860b}
   /* модалка */
   .overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:50;
     align-items:center;justify-content:center;padding:16px}
@@ -101,6 +115,7 @@
     <button data-f="all" class="on">Все</button>
     <button data-f="need">Нужны</button>
     <button data-f="dup">Дубли</button>
+    <button data-f="stats" title="Статистика по странам">📊</button>
   </div>
   <button class="menu-btn" id="menuBtn">☰</button>
 </div>
@@ -271,6 +286,7 @@ function cellMatchesQuery(s, it){
 
 function render(){
   const scrollY = window.scrollY;
+  if(filter==="stats"){ renderStats(); window.scrollTo(0, scrollY); return; }
   content.innerHTML = "";
   let shownAny = false;
 
@@ -329,6 +345,39 @@ function render(){
   }
   updateSummary();
   window.scrollTo(0, scrollY);
+}
+
+// Статистика: полоски прогресса по странам (отсортировано от полных к пустым)
+function renderStats(){
+  content.innerHTML = "";
+  const t = totals();
+  const head = document.createElement("div");
+  head.className = "stats-head";
+  head.innerHTML = `Собрано <span class="big">${(t.total? t.have/t.total*100:0).toFixed(0)}%</span> `+
+                   `— ${t.have} из ${t.total} наклеек`;
+  content.appendChild(head);
+
+  const rows = SECTIONS
+    .filter(s => s.code !== "FWC")                 // только сборные
+    .map(s => {
+      const have = s.codes.filter(it=>has(it.code)).length;
+      return { name:s.name, have, total:s.codes.length, pct: have/s.codes.length };
+    })
+    .sort((a,b) => b.pct - a.pct || b.have - a.have || a.name.localeCompare(b.name,"ru"));
+
+  const wrap = document.createElement("div");
+  wrap.className = "stats";
+  rows.forEach(r => {
+    const row = document.createElement("div");
+    row.className = "stat-row" + (r.have===r.total ? " full" : "");
+    row.innerHTML =
+      `<span class="stat-name" title="${r.name}">${r.name}</span>`+
+      `<span class="stat-track"><i style="width:${(r.pct*100).toFixed(0)}%"></i></span>`+
+      `<span class="stat-num">${r.have}/${r.total}</span>`;
+    wrap.appendChild(row);
+  });
+  content.appendChild(wrap);
+  updateSummary();
 }
 
 function makeCell(code, label){
