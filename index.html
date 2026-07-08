@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0b6b3a">
+<title>Наклейки Panini ЧМ-2026</title>
+<style>
+  :root{
+    --need:#e7e9ee;      /* нужна */
+    --need-b:#c9ccd6;
+    --have:#25a35a;      /* есть */
+    --have-b:#1c7d45;
+    --dup:#2b7be0;       /* дубли */
+    --dup-b:#1c5ec0;
+    --bg:#f4f6f8;
+    --card:#ffffff;
+    --ink:#1c2330;
+    --muted:#6b7280;
+    --accent:#0b6b3a;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+  header{position:sticky;top:0;z-index:20;background:var(--accent);color:#fff;
+    padding:10px 12px 8px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+  h1{font-size:17px;margin:0 0 6px;font-weight:700;display:flex;align-items:center;gap:8px}
+  h1 .ball{font-size:20px}
+  .bar{height:12px;border-radius:8px;background:rgba(255,255,255,.28);overflow:hidden}
+  .bar > i{display:block;height:100%;width:0;background:#ffd23f;transition:width .25s}
+  .sum{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;margin-top:6px;opacity:.97}
+  .sum b{font-size:15px}
+  .toolbar{position:sticky;top:0;z-index:15;background:var(--card);
+    border-bottom:1px solid #e5e7eb;padding:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .toolbar.stick{top:0}
+  #search{flex:1 1 160px;min-width:120px;padding:9px 11px;border:1px solid #d1d5db;
+    border-radius:10px;font-size:15px}
+  .filters{display:flex;gap:6px}
+  .filters button, .menu-btn{padding:9px 12px;border:1px solid #d1d5db;background:#fff;
+    border-radius:10px;font-size:14px;cursor:pointer;color:var(--ink)}
+  .filters button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .legend{font-size:12px;color:var(--muted);padding:6px 12px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .legend .dot{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:4px}
+  main{padding:8px 8px 48px}
+  .section{background:var(--card);border:1px solid #e5e7eb;border-radius:14px;margin:8px 0;overflow:hidden}
+  .sec-head{display:flex;align-items:center;gap:8px;padding:11px 12px;cursor:pointer;user-select:none}
+  .sec-head .name{font-weight:700;font-size:15px}
+  .sec-head .code{color:var(--muted);font-size:12px;font-weight:600}
+  .sec-head .cnt{margin-left:auto;font-size:13px;color:var(--muted);font-weight:600;white-space:nowrap}
+  .sec-head .chev{color:var(--muted);transition:transform .15s}
+  .section.closed .grid{display:none}
+  .section.closed .chev{transform:rotate(-90deg)}
+  .section.done .name::after{content:" ✓";color:var(--have)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(48px,1fr));gap:6px;padding:0 10px 12px}
+  .cell{position:relative;min-height:48px;border-radius:10px;border:1px solid var(--need-b);
+    background:var(--need);display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:16px;color:#374151;cursor:pointer;user-select:none;
+    touch-action:manipulation}
+  .cell.have{background:var(--have);border-color:var(--have-b);color:#fff}
+  .cell.dup{background:var(--dup);border-color:var(--dup-b);color:#fff}
+  .cell .badge{position:absolute;top:-6px;right:-6px;background:#ffd23f;color:#3a2f00;
+    font-size:11px;font-weight:800;border-radius:999px;padding:1px 6px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .empty{color:var(--muted);text-align:center;padding:24px;font-size:14px}
+  /* модалка */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:50;
+    align-items:center;justify-content:center;padding:16px}
+  .overlay.open{display:flex}
+  .modal{background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:85vh;
+    overflow:auto;padding:18px}
+  .modal h2{margin:0 0 10px;font-size:18px}
+  .modal p, .modal li{font-size:14px;line-height:1.5}
+  .modal .row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+  .modal button{padding:11px 14px;border-radius:10px;border:1px solid #d1d5db;background:#fff;
+    font-size:14px;cursor:pointer}
+  .modal button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .modal textarea{width:100%;min-height:120px;font-family:monospace;font-size:12px;
+    border:1px solid #d1d5db;border-radius:10px;padding:8px}
+  .close-x{float:right;border:none;background:none;font-size:22px;cursor:pointer;color:var(--muted)}
+  .hint{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="ball">⚽</span> Наклейки Panini · ЧМ-2026</h1>
+  <div class="bar"><i id="pbar"></i></div>
+  <div class="sum">
+    <span>Собрано <b id="s-have">0</b>/<span id="s-total">0</span></span>
+    <span>Осталось <b id="s-need">0</b></span>
+    <span>На обмен <b id="s-dup">0</b></span>
+    <span id="sync" title="Состояние общей базы">⚪ локально</span>
+  </div>
+</header>
+
+<div class="toolbar">
+  <input id="search" type="search" placeholder="Поиск: код (BRA 7) или команда" autocomplete="off">
+  <div class="filters">
+    <button data-f="all" class="on">Все</button>
+    <button data-f="need">Нужны</button>
+    <button data-f="dup">Дубли</button>
+  </div>
+  <button class="menu-btn" id="menuBtn">☰</button>
+</div>
+<div class="legend">
+  <span><i class="dot" style="background:var(--need);border:1px solid var(--need-b)"></i>нужна</span>
+  <span><i class="dot" style="background:var(--have)"></i>есть</span>
+  <span><i class="dot" style="background:var(--dup)"></i>есть + дубль</span>
+  <span class="hint">Нажми — добавить копию · Удерживай (или правый клик) — сбросить</span>
+</div>
+
+<main id="content"></main>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <button class="close-x" id="closeModal">×</button>
+    <h2>Меню</h2>
+    <p class="hint">Всё хранится прямо в этом телефоне/браузере. Делай резервную копию, чтобы не потерять при чистке браузера.</p>
+    <div class="row">
+      <button id="copyNeed">📋 Скопировать список «нужны»</button>
+      <button id="copyDup">📋 Скопировать список «на обмен»</button>
+    </div>
+    <div class="row">
+      <button id="exportBtn" class="primary">💾 Сохранить копию (файл)</button>
+      <button id="importBtn">📂 Загрузить из файла</button>
+      <input id="importFile" type="file" accept="application/json,.json" style="display:none">
+    </div>
+    <div class="row">
+      <button id="resetAll" style="color:#b91c1c;border-color:#f0b4b4">🗑 Сбросить всё</button>
+    </div>
+    <p class="hint">Список для копирования (можно отправить другу):</p>
+    <textarea id="shareBox" readonly placeholder="Нажми одну из кнопок «Скопировать»..."></textarea>
+    <h2 style="margin-top:14px;font-size:15px">Как пользоваться</h2>
+    <ul>
+      <li>Наклейка приклеена в альбом → нажми на её номер, клетка станет зелёной («есть»).</li>
+      <li>Попался повтор → нажми ещё раз, клетка станет синей с числом дублей — это на обмен.</li>
+      <li>Ошибся → удерживай клетку пару секунд, вернётся в «нужна».</li>
+      <li>«Нужны» — что докупить. «Дубли» — что нести на обмен.</li>
+      <li>Каждая наклейка подписана кодом (например <b>ARG 5</b>): команда + номер. Ищи так же в приложении.</li>
+    </ul>
+    <p class="hint">Спецблестящие (вступление FWC 1–9 и «Музей ФИФА» FWC 10–20) — коды примерные, сверяй по месту в альбоме. Составы команд — по официальному чек-листу Panini; отдельные сборные могут уточняться.</p>
+  </div>
+</div>
+
+<!-- Firebase: общая база данных (подключается по CDN, работает офлайн с догоном) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+
+<script>
+"use strict";
+
+/* ==================== НАСТРОЙКИ ОБЩЕЙ БАЗЫ (Firebase) ====================
+   Вставь сюда данные СВОЕГО проекта Firebase (я подскажу, где их взять).
+   Пока значения начинаются на "PASTE" — приложение работает локально,
+   без общей базы (как раньше, только в этом телефоне).
+   ROOM_ID должен быть ОДИНАКОВЫМ на обоих телефонах — тогда база общая. */
+const FB_CONFIG = {
+  apiKey:      "AIzaSyC0seRz8-2XV0BmKtWP1P0p6E85i16p514",
+  authDomain:  "dima-707.firebaseapp.com",
+  databaseURL: "https://dima-707-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:   "dima-707",
+  appId:       "1:263387188424:web:4e4b46dd99aa37dc0ba9fd"
+};
+const ROOM_ID = "panini-wc26-7fq3k9mz";
+/* ======================================================================== */
+
+let FB = null; // объект с ссылкой на общую базу, когда подключено
+
+/* ---------- Структура альбома ЧМ-2026 (980 наклеек) ---------- */
+const TEAMS = [
+ ["MEX","Мексика"],["RSA","ЮАР"],["KOR","Южная Корея"],["CZE","Чехия"],
+ ["CAN","Канада"],["BIH","Босния и Герцеговина"],["QAT","Катар"],["SUI","Швейцария"],
+ ["BRA","Бразилия"],["MAR","Марокко"],["HAI","Гаити"],["SCO","Шотландия"],
+ ["USA","США"],["PAR","Парагвай"],["AUS","Австралия"],["TUR","Турция"],
+ ["GER","Германия"],["CUW","Кюрасао"],["CIV","Кот-д’Ивуар"],["ECU","Эквадор"],
+ ["NED","Нидерланды"],["JPN","Япония"],["SWE","Швеция"],["TUN","Тунис"],
+ ["BEL","Бельгия"],["EGY","Египет"],["IRN","Иран"],["NZL","Новая Зеландия"],
+ ["ESP","Испания"],["CPV","Кабо-Верде"],["KSA","Саудовская Аравия"],["URU","Уругвай"],
+ ["FRA","Франция"],["SEN","Сенегал"],["IRQ","Ирак"],["NOR","Норвегия"],
+ ["ARG","Аргентина"],["ALG","Алжир"],["AUT","Австрия"],["JOR","Иордания"],
+ ["POR","Португалия"],["COD","ДР Конго"],["UZB","Узбекистан"],["COL","Колумбия"],
+ ["ENG","Англия"],["CRO","Хорватия"],["GHA","Гана"],["PAN","Панама"]
+];
+
+// section: {name, code(prefix), start, count}
+const SECTIONS = [
+  {name:"Вступление и эмблемы", code:"FWC", start:1,  count:9},
+  {name:"Музей ФИФА",           code:"FWC", start:10, count:11},
+  ...TEAMS.map(t => ({name:t[1], code:t[0], start:1, count:20}))
+];
+
+// построим коды наклеек по секциям
+SECTIONS.forEach(s => {
+  s.codes = [];
+  for(let i=0;i<s.count;i++){
+    const n = s.start + i;
+    s.codes.push({code: s.code + n, n});
+  }
+});
+const TOTAL = SECTIONS.reduce((a,s)=>a+s.count,0);
+
+/* ---------- Состояние ---------- */
+const KEY = "panini-wc2026-v1";
+let state = load();               // {code: копий}  (1 = есть, >=2 = есть + (n-1) дублей)
+let filter = "all";
+let query = "";
+
+function load(){
+  try{ return JSON.parse(localStorage.getItem(KEY)) || {}; }catch(e){ return {}; }
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
+}
+
+/* ---------- Хелперы состояния ---------- */
+const val   = c => state[c] || 0;
+const has   = c => val(c) >= 1;
+const dupOf = c => Math.max(0, val(c) - 1);
+
+function setVal(c, v){
+  if(v<=0) delete state[c]; else state[c]=v;
+  save();
+  fbWrite(c, v);
+}
+function fbWrite(code, v){
+  if(!FB) return;
+  try{
+    if(v<=0) FB.stickers.child(code).remove();
+    else     FB.stickers.child(code).set(v);
+  }catch(e){}
+}
+function bump(c){ setVal(c, val(c)+1); }          // нужна→есть→дубль→+дубль
+function reset(c){ setVal(c, 0); }
+
+/* ---------- Подсчёты ---------- */
+function totals(){
+  let have=0, dup=0;
+  for(const s of SECTIONS) for(const it of s.codes){
+    const v = val(it.code);
+    if(v>=1) have++;
+    if(v>=2) dup += v-1;
+  }
+  return {have, need: TOTAL-have, dup, total: TOTAL};
+}
+
+/* ---------- Отрисовка ---------- */
+const content = document.getElementById("content");
+
+function matchSection(s){
+  if(!query) return true;
+  const q = query.toLowerCase();
+  if(s.name.toLowerCase().includes(q)) return true;
+  if(s.code.toLowerCase().includes(q)) return true;
+  return false;
+}
+function cellVisibleInFilter(c){
+  if(filter==="need") return !has(c);
+  if(filter==="dup")  return dupOf(c) >= 1;
+  return true;
+}
+// если поиск похож на конкретный код (BRA7), покажем только его команду и клетки
+function cellMatchesQuery(s, it){
+  if(!query) return true;
+  const q = query.toLowerCase().replace(/\s+/g,"");
+  // код целиком, или имя команды содержит запрос, или префикс совпал
+  if(s.name.toLowerCase().includes(query.toLowerCase())) return true;
+  return it.code.toLowerCase().includes(q);
+}
+
+function render(){
+  const scrollY = window.scrollY;
+  content.innerHTML = "";
+  let shownAny = false;
+
+  SECTIONS.forEach((s, si) => {
+    // фильтр по клеткам
+    const cells = s.codes.filter(it => cellVisibleInFilter(it.code) && cellMatchesQuery(s, it));
+    // при поиске: если совпало имя команды — показываем все клетки этой команды
+    let cellList = cells;
+    if(query && (s.name.toLowerCase().includes(query.toLowerCase()) || s.code.toLowerCase().includes(query.toLowerCase().replace(/\s+/g,"")))){
+      cellList = s.codes.filter(it => cellVisibleInFilter(it.code));
+    }
+    if(cellList.length===0) return;
+    shownAny = true;
+
+    const have = s.codes.filter(it=>has(it.code)).length;
+    const sec = document.createElement("div");
+    sec.className = "section" + (have===s.count ? " done":"");
+    sec.dataset.si = si;
+
+    const head = document.createElement("div");
+    head.className = "sec-head";
+    head.innerHTML =
+      `<span class="chev">▾</span>`+
+      `<span class="name">${s.name}</span>`+
+      `<span class="code">${s.code}</span>`+
+      `<span class="cnt">${have}/${s.count}</span>`;
+    head.addEventListener("click", ()=> sec.classList.toggle("closed"));
+    sec.appendChild(head);
+
+    const grid = document.createElement("div");
+    grid.className = "grid";
+    cellList.forEach(it => grid.appendChild(makeCell(it.code, it.n)));
+    sec.appendChild(grid);
+    content.appendChild(sec);
+  });
+
+  if(!shownAny){
+    const e = document.createElement("div");
+    e.className = "empty";
+    e.textContent = filter==="need" ? "Все наклейки собраны! 🎉"
+                  : filter==="dup"  ? "Пока нет дублей на обмен."
+                  : "Ничего не найдено.";
+    content.appendChild(e);
+  }
+  updateSummary();
+  window.scrollTo(0, scrollY);
+}
+
+function makeCell(code, n){
+  const d = document.createElement("div");
+  d.className = "cell";
+  d.id = "c_"+code;
+  d.dataset.code = code;
+  paintCell(d, code, n);
+  attachPress(d, code);
+  return d;
+}
+function paintCell(d, code, n){
+  const v = val(code);
+  d.classList.toggle("have", v>=1);
+  d.classList.toggle("dup",  v>=2);
+  const dup = Math.max(0, v-1);
+  d.innerHTML = String(n) + (dup>0 ? `<span class="badge">+${dup}</span>` : "");
+}
+
+/* нажатие = +копия, удержание/правый клик = сброс */
+function attachPress(el, code){
+  let timer=null, longFired=false;
+  const start = e => {
+    longFired=false;
+    timer = setTimeout(()=>{ longFired=true; reset(code); afterChange(code); }, 500);
+  };
+  const end = e => {
+    if(timer){ clearTimeout(timer); timer=null; }
+    if(!longFired){ bump(code); afterChange(code); }
+  };
+  const cancel = () => { if(timer){ clearTimeout(timer); timer=null; } };
+  el.addEventListener("pointerdown", start);
+  el.addEventListener("pointerup", end);
+  el.addEventListener("pointerleave", cancel);
+  el.addEventListener("pointercancel", cancel);
+  el.addEventListener("contextmenu", e => { e.preventDefault(); reset(code); afterChange(code); });
+}
+
+function afterChange(code){
+  // точечно обновляем клетку (в режиме "Все"), иначе перерисуем список
+  const si = SECTIONS.findIndex(s => s.codes.some(it=>it.code===code));
+  const it = SECTIONS[si].codes.find(x=>x.code===code);
+  const cell = document.getElementById("c_"+code);
+  if(cell) paintCell(cell, code, it.n);
+
+  // обновим счётчик секции
+  const s = SECTIONS[si];
+  const have = s.codes.filter(x=>has(x.code)).length;
+  const secEl = content.querySelector(`.section[data-si="${si}"]`);
+  if(secEl){
+    const cnt = secEl.querySelector(".cnt");
+    if(cnt) cnt.textContent = `${have}/${s.count}`;
+    secEl.classList.toggle("done", have===s.count);
+  }
+  updateSummary();
+
+  // в фильтрах "нужны"/"дубли" клетка могла выпасть из списка
+  if(filter!=="all") render();
+}
+
+function updateSummary(){
+  const t = totals();
+  document.getElementById("s-have").textContent = t.have;
+  document.getElementById("s-total").textContent = t.total;
+  document.getElementById("s-need").textContent = t.need;
+  document.getElementById("s-dup").textContent  = t.dup;
+  document.getElementById("pbar").style.width = (t.total? (t.have/t.total*100):0).toFixed(1)+"%";
+}
+
+/* ---------- Тулбар ---------- */
+document.querySelectorAll(".filters button").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    document.querySelectorAll(".filters button").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+    filter = b.dataset.f;
+    render();
+  });
+});
+const searchEl = document.getElementById("search");
+searchEl.addEventListener("input", ()=>{ query = searchEl.value.trim(); render(); });
+
+/* ---------- Меню / резервные копии ---------- */
+const overlay = document.getElementById("overlay");
+document.getElementById("menuBtn").addEventListener("click", ()=>overlay.classList.add("open"));
+document.getElementById("closeModal").addEventListener("click", ()=>overlay.classList.remove("open"));
+overlay.addEventListener("click", e=>{ if(e.target===overlay) overlay.classList.remove("open"); });
+
+function listNeed(){
+  const parts=[];
+  for(const s of SECTIONS){
+    const nums = s.codes.filter(it=>!has(it.code)).map(it=>it.n);
+    if(nums.length) parts.push(`${s.name} (${s.code}): ${nums.join(", ")}`);
+  }
+  return parts.length ? "НУЖНЫ:\n"+parts.join("\n") : "Нужных нет — всё собрано!";
+}
+function listDup(){
+  const parts=[];
+  for(const s of SECTIONS){
+    const items = s.codes.filter(it=>dupOf(it.code)>=1)
+      .map(it=>{ const d=dupOf(it.code); return it.code + (d>1?` ×${d}`:""); });
+    if(items.length) parts.push(`${s.name}: ${items.join(", ")}`);
+  }
+  return parts.length ? "НА ОБМЕН:\n"+parts.join("\n") : "Дублей на обмен нет.";
+}
+const shareBox = document.getElementById("shareBox");
+function showShare(text){
+  shareBox.value = text;
+  try{ navigator.clipboard.writeText(text); }catch(e){}
+  shareBox.focus(); shareBox.select();
+}
+document.getElementById("copyNeed").addEventListener("click", ()=>showShare(listNeed()));
+document.getElementById("copyDup").addEventListener("click", ()=>showShare(listDup()));
+
+document.getElementById("exportBtn").addEventListener("click", ()=>{
+  const data = JSON.stringify({app:"panini-wc2026", ts:new Date().toISOString(), state}, null, 0);
+  const blob = new Blob([data], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "panini-2026-копия.json";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+});
+document.getElementById("importBtn").addEventListener("click", ()=>document.getElementById("importFile").click());
+document.getElementById("importFile").addEventListener("change", e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const obj = JSON.parse(r.result);
+      const st = obj.state || obj;
+      if(st && typeof st==="object"){
+        state = st; save();
+        if(FB){ try{ FB.stickers.set(st); }catch(e){} }
+        render(); overlay.classList.remove("open");
+      }
+    }catch(err){ alert("Не удалось прочитать файл копии."); }
+  };
+  r.readAsText(f);
+});
+document.getElementById("resetAll").addEventListener("click", ()=>{
+  if(confirm("Стереть все отметки? Это нельзя отменить (сделай копию заранее).")){
+    state = {}; save();
+    if(FB){ try{ FB.stickers.set(null); }catch(e){} }
+    render(); overlay.classList.remove("open");
+  }
+});
+
+/* ---------- Общая база (Firebase) ---------- */
+function setStatus(s){
+  const el = document.getElementById("sync");
+  if(!el) return;
+  if(s==="online")       el.textContent = "🟢 общая база";
+  else if(s==="offline") el.textContent = "🟡 нет сети (догоню)";
+  else                   el.textContent = "⚪ локально";
+}
+function fbInit(){
+  if(!window.firebase || !FB_CONFIG.apiKey || FB_CONFIG.apiKey.indexOf("PASTE")===0){
+    setStatus("local"); return;                 // база не настроена — работаем локально
+  }
+  try{
+    firebase.initializeApp(FB_CONFIG);
+    const db = firebase.database();
+    FB = { stickers: db.ref("rooms/"+ROOM_ID+"/stickers") };
+
+    db.ref(".info/connected").on("value", s => setStatus(s.val() ? "online" : "offline"));
+
+    let first = true;
+    FB.stickers.on("value", snap => {
+      const remote = snap.val();
+      if(first){
+        first = false;
+        // если общая база пустая, а локально уже что-то отмечено — засеваем её
+        if((!remote || !Object.keys(remote).length) && Object.keys(state).length){
+          try{ FB.stickers.set(state); }catch(e){}
+          return;
+        }
+      }
+      state = remote || {};
+      save();
+      render();
+    });
+  }catch(e){ setStatus("local"); }
+}
+
+/* ---------- Старт ---------- */
+render();
+fbInit();
+</script>
+</body>
+</html>
