@@ -185,22 +185,21 @@ const TEAMS = [
  ["ENG","Англия"],["CRO","Хорватия"],["GHA","Гана"],["PAN","Панама"]
 ];
 
-// section: {name, code(prefix), start, count}
-const SECTIONS = [
-  {name:"Вступление и эмблемы", code:"FWC", start:1,  count:9},
-  {name:"Музей ФИФА",           code:"FWC", start:10, count:11},
-  ...TEAMS.map(t => ({name:t[1], code:t[0], start:1, count:20}))
-];
+function genCodes(prefix, start, count){
+  const arr = [];
+  for(let i=0;i<count;i++){ const n = start+i; arr.push({code: prefix+n, label: String(n)}); }
+  return arr;
+}
 
-// построим коды наклеек по секциям
-SECTIONS.forEach(s => {
-  s.codes = [];
-  for(let i=0;i<s.count;i++){
-    const n = s.start + i;
-    s.codes.push({code: s.code + n, n});
-  }
-});
-const TOTAL = SECTIONS.reduce((a,s)=>a+s.count,0);
+// section: {name, code(префикс для показа), codes:[{code, label}]}
+// Спецблестящие: логотип "00" + FWC 1..8 (вступление, 9 шт) и FWC 9..19 (музей, 11 шт) = 20.
+const SECTIONS = [
+  {name:"Вступление и эмблемы", code:"FWC",
+   codes:[{code:"FWC00", label:"00"}, ...genCodes("FWC", 1, 8)]},
+  {name:"Музей ФИФА",           code:"FWC", codes: genCodes("FWC", 9, 11)},
+  ...TEAMS.map(t => ({name:t[1], code:t[0], codes: genCodes(t[0], 1, 20)}))
+];
+const TOTAL = SECTIONS.reduce((a,s)=>a+s.codes.length,0);
 
 /* ---------- Состояние ---------- */
 const KEY = "panini-wc2026-v1";
@@ -300,7 +299,7 @@ function render(){
 
     const have = s.codes.filter(it=>has(it.code)).length;
     const sec = document.createElement("div");
-    sec.className = "section" + (have===s.count ? " done":"");
+    sec.className = "section" + (have===s.codes.length ? " done":"");
     sec.dataset.si = si;
 
     const head = document.createElement("div");
@@ -309,13 +308,13 @@ function render(){
       `<span class="chev">▾</span>`+
       `<span class="name">${s.name}</span>`+
       `<span class="code">${s.code}</span>`+
-      `<span class="cnt">${have}/${s.count}</span>`;
+      `<span class="cnt">${have}/${s.codes.length}</span>`;
     head.addEventListener("click", ()=> sec.classList.toggle("closed"));
     sec.appendChild(head);
 
     const grid = document.createElement("div");
     grid.className = "grid";
-    cellList.forEach(it => grid.appendChild(makeCell(it.code, it.n)));
+    cellList.forEach(it => grid.appendChild(makeCell(it.code, it.label)));
     sec.appendChild(grid);
     content.appendChild(sec);
   });
@@ -332,21 +331,21 @@ function render(){
   window.scrollTo(0, scrollY);
 }
 
-function makeCell(code, n){
+function makeCell(code, label){
   const d = document.createElement("div");
   d.className = "cell";
   d.id = "c_"+code;
   d.dataset.code = code;
-  paintCell(d, code, n);
+  paintCell(d, code, label);
   attachPress(d, code);
   return d;
 }
-function paintCell(d, code, n){
+function paintCell(d, code, label){
   const v = val(code);
   d.classList.toggle("have", v>=1);
   d.classList.toggle("dup",  v>=2);
   const dup = Math.max(0, v-1);
-  d.innerHTML = String(n) + (dup>0 ? `<span class="badge">+${dup}</span>` : "");
+  d.innerHTML = String(label) + (dup>0 ? `<span class="badge">+${dup}</span>` : "");
 }
 
 /* нажатие = +копия, удержание/правый клик = сброс */
@@ -373,7 +372,7 @@ function afterChange(code){
   const si = SECTIONS.findIndex(s => s.codes.some(it=>it.code===code));
   const it = SECTIONS[si].codes.find(x=>x.code===code);
   const cell = document.getElementById("c_"+code);
-  if(cell) paintCell(cell, code, it.n);
+  if(cell) paintCell(cell, code, it.label);
 
   // обновим счётчик секции
   const s = SECTIONS[si];
@@ -381,8 +380,8 @@ function afterChange(code){
   const secEl = content.querySelector(`.section[data-si="${si}"]`);
   if(secEl){
     const cnt = secEl.querySelector(".cnt");
-    if(cnt) cnt.textContent = `${have}/${s.count}`;
-    secEl.classList.toggle("done", have===s.count);
+    if(cnt) cnt.textContent = `${have}/${s.codes.length}`;
+    secEl.classList.toggle("done", have===s.codes.length);
   }
   updateSummary();
 
@@ -420,7 +419,7 @@ overlay.addEventListener("click", e=>{ if(e.target===overlay) overlay.classList.
 function listNeed(){
   const parts=[];
   for(const s of SECTIONS){
-    const nums = s.codes.filter(it=>!has(it.code)).map(it=>it.n);
+    const nums = s.codes.filter(it=>!has(it.code)).map(it=>it.label);
     if(nums.length) parts.push(`${s.name} (${s.code}): ${nums.join(", ")}`);
   }
   return parts.length ? "НУЖНЫ:\n"+parts.join("\n") : "Нужных нет — всё собрано!";
@@ -439,7 +438,7 @@ function tradeShareText(){
   const items=[];
   for(const s of SECTIONS) for(const it of s.codes){
     const d = dupOf(it.code);
-    if(d>=1) items.push(`${s.code} ${it.n}` + (d>1?` ×${d}`:""));
+    if(d>=1) items.push(`${s.code} ${it.label}` + (d>1?` ×${d}`:""));
   }
   if(!items.length) return "Пока нет наклеек на обмен.";
   return "Меняю наклейки Panini ЧМ-2026:\n" + items.join(", ");
