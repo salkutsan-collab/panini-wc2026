@@ -61,6 +61,10 @@
   .cell .badge{position:absolute;top:-6px;right:-6px;background:#ffd23f;color:#3a2f00;
     font-size:11px;font-weight:800;border-radius:999px;padding:1px 6px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
   .empty{color:var(--muted);text-align:center;padding:24px;font-size:14px}
+  .share-bar{padding:6px 2px 10px}
+  .share-btn{width:100%;padding:14px;border:none;border-radius:12px;background:var(--dup);
+    color:#fff;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(43,123,224,.35)}
+  .share-btn:active{transform:translateY(1px)}
   /* модалка */
   .overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:50;
     align-items:center;justify-content:center;padding:16px}
@@ -271,6 +275,18 @@ function render(){
   content.innerHTML = "";
   let shownAny = false;
 
+  // кнопка "Отправить на обмен" — только в разделе "Дубли" и если дубли есть
+  if(filter==="dup" && SECTIONS.some(s=>s.codes.some(it=>dupOf(it.code)>=1))){
+    const bar = document.createElement("div");
+    bar.className = "share-bar";
+    const btn = document.createElement("button");
+    btn.className = "share-btn";
+    btn.textContent = "📤 Отправить на обмен";
+    btn.addEventListener("click", shareTrade);
+    bar.appendChild(btn);
+    content.appendChild(bar);
+  }
+
   SECTIONS.forEach((s, si) => {
     // фильтр по клеткам
     const cells = s.codes.filter(it => cellVisibleInFilter(it.code) && cellMatchesQuery(s, it));
@@ -418,6 +434,27 @@ function listDup(){
   }
   return parts.length ? "НА ОБМЕН:\n"+parts.join("\n") : "Дублей на обмен нет.";
 }
+// плоский список для обмена: "BRA 7", а при нескольких дублях "BRA 7 ×2"
+function tradeShareText(){
+  const items=[];
+  for(const s of SECTIONS) for(const it of s.codes){
+    const d = dupOf(it.code);
+    if(d>=1) items.push(`${s.code} ${it.n}` + (d>1?` ×${d}`:""));
+  }
+  if(!items.length) return "Пока нет наклеек на обмен.";
+  return "Меняю наклейки Panini ЧМ-2026:\n" + items.join(", ");
+}
+async function shareTrade(){
+  const text = tradeShareText();
+  if(navigator.share){
+    try{ await navigator.share({title:"Наклейки на обмен", text}); return; }
+    catch(e){ if(e && e.name==="AbortError") return; }   // пользователь закрыл окно
+  }
+  // запасной вариант: копируем в буфер
+  try{ await navigator.clipboard.writeText(text); alert("Список скопирован — вставьте в мессенджере."); }
+  catch(e){ showShare(text); overlay.classList.add("open"); }
+}
+
 const shareBox = document.getElementById("shareBox");
 function showShare(text){
   shareBox.value = text;
